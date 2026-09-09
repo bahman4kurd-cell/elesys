@@ -62,50 +62,19 @@ function aistudioMediaPlugin(): Plugin {
     },
   };
 }
-
-function singleFilePreviewPlugin(): Plugin {
-  return {
-    name: 'single-file-preview',
-    closeBundle() {
-      const distDir = path.resolve(__dirname, 'dist');
-      const indexPath = path.join(distDir, 'index.html');
-      if (!fs.existsSync(indexPath)) return;
-
-      let html = fs.readFileSync(indexPath, 'utf8');
-      const scriptMatch = html.match(/<script type="module"[^>]+src="([^"]+)"[^>]*><\/script>/);
-      const styleMatch = html.match(/<link rel="stylesheet"[^>]+href="([^"]+)"[^>]*>/);
-      if (scriptMatch && !scriptMatch[1].startsWith('data:')) {
-        const scriptPath = path.resolve(distDir, scriptMatch[1]);
-        const script = fs.readFileSync(scriptPath, 'utf8');
-          const dataUrl = `data:text/javascript;base64,${Buffer.from(script).toString('base64')}`;
-          html = html.replace(scriptMatch[0], `<script type="module" src="${dataUrl}"></script>`);
-      }
-      if (styleMatch) {
-        const stylePath = path.resolve(distDir, styleMatch[1]);
-        const style = fs.readFileSync(stylePath, 'utf8');
-        html = html.replace(styleMatch[0], `<style>${style}</style>`);
-      }
-        fs.copyFileSync(path.resolve(__dirname, 'logo.ico.ico'), path.join(distDir, 'logo.ico.ico'));
-      fs.writeFileSync(indexPath, html);
-    },
-  };
-}
 // LINT.ThenChange(//depot/google3/java/com/google/alkali/boq/makersuite/applet_dev_service/templates/initializers/react_theme/vite.config.ts:aistudio_media_plugin)
 
 export default defineConfig(() => {
   return {
     base: './',
-    plugins: [react(), tailwindcss(), aistudioMediaPlugin(), singleFilePreviewPlugin()],
+    plugins: [react(), tailwindcss(), aistudioMediaPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };
