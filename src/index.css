@@ -1,0 +1,185 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Vazirmatn', 'Noto Sans Arabic', system-ui, -apple-system, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  body.theme-dark {
+    background-color: #0B0F19;
+    color: #F1F5F9;
+  }
+
+  body.theme-light {
+    background-color: #F8FAFC;
+    color: #0F172A;
+  }
+
+  body.theme-gray {
+    background-color: #1E293B;
+    color: #F8FAFC;
+  }
+
+  body.theme-government {
+    background-color: #eef3f8;
+    color: #102a43;
+  }
+}
+
+/* Formal government dashboard presentation; application data remains unchanged. */
+body.theme-government .government-header .text-white {
+    color: #102a43 !important;
+  }
+
+body.theme-government .government-header .bg-slate-950,
+body.theme-government .government-header .bg-slate-900,
+body.theme-government .government-header .bg-\[\#0F172A\] {
+    background-color: #f1f5f9 !important;
+  }
+
+body.theme-government .government-dashboard .bg-\[\#1E293B\],
+body.theme-government .government-dashboard .bg-slate-900,
+body.theme-government .government-dashboard .bg-slate-900\/80,
+body.theme-government .government-dashboard .bg-slate-950 {
+    background-color: #ffffff !important;
+  }
+
+body.theme-government .government-dashboard .text-white,
+body.theme-government .government-dashboard .text-slate-100,
+body.theme-government .government-dashboard .text-slate-200 {
+    color: #102a43 !important;
+  }
+
+body.theme-government .government-dashboard .border-slate-700,
+body.theme-government .government-dashboard .border-slate-700\/80 {
+    border-color: #dbe4ee !important;
+  }
+
+/* App-wide neutral surface adaptation so all panels/text/borders follow selected theme. */
+body.theme-light .theme-adaptive .bg-slate-950,
+body.theme-light .theme-adaptive .bg-slate-900,
+body.theme-light .theme-adaptive .bg-slate-900\/80,
+body.theme-light .theme-adaptive .bg-slate-900\/90,
+body.theme-light .theme-adaptive .bg-slate-800,
+body.theme-light .theme-adaptive .bg-\[\#1E293B\],
+body.theme-light .theme-adaptive .bg-\[\#0F172A\] {
+  background-color: #ffffff !important;
+}
+
+body.theme-light .theme-adaptive .bg-slate-800\/90,
+body.theme-light .theme-adaptive .bg-slate-900\/70,
+body.theme-light .theme-adaptive .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+body.theme-light .theme-adaptive .border-slate-800,
+body.theme-light .theme-adaptive .border-slate-700,
+body.theme-light .theme-adaptive .border-slate-700\/80,
+body.theme-light .theme-adaptive .border-slate-600 {
+  border-color: #cbd5e1 !important;
+}
+
+body.theme-light .theme-adaptive .text-white,
+body.theme-light .theme-adaptive .text-slate-100,
+body.theme-light .theme-adaptive .text-slate-200,
+body.theme-light .theme-adaptive .text-slate-300 {
+  color: #0f172a !important;
+}
+
+body.theme-light .theme-adaptive .text-slate-400,
+body.theme-light .theme-adaptive .text-slate-500 {
+  color: #475569 !important;
+}
+
+body.theme-government .theme-adaptive .bg-slate-950,
+body.theme-government .theme-adaptive .bg-slate-900,
+body.theme-government .theme-adaptive .bg-slate-900\/80,
+body.theme-government .theme-adaptive .bg-slate-900\/90,
+body.theme-government .theme-adaptive .bg-slate-800,
+body.theme-government .theme-adaptive .bg-\[\#1E293B\],
+body.theme-government .theme-adaptive .bg-\[\#0F172A\] {
+  background-color: #fdfdf9 !important;
+}
+
+body.theme-government .theme-adaptive .bg-slate-800\/90,
+body.theme-government .theme-adaptive .bg-slate-900\/70,
+body.theme-government .theme-adaptive .bg-slate-50 {
+  background-color: #f3f6fa !important;
+}
+
+body.theme-government .theme-adaptive .border-slate-800,
+body.theme-government .theme-adaptive .border-slate-700,
+body.theme-government .theme-adaptive .border-slate-700\/80,
+body.theme-government .theme-adaptive .border-slate-600 {
+  border-color: #cbd7e3 !important;
+}
+
+body.theme-government .theme-adaptive .text-white,
+body.theme-government .theme-adaptive .text-slate-100,
+body.theme-government .theme-adaptive .text-slate-200,
+body.theme-government .theme-adaptive .text-slate-300 {
+  color: #102a43 !important;
+}
+
+body.theme-government .theme-adaptive .text-slate-400,
+body.theme-government .theme-adaptive .text-slate-500 {
+  color: #486581 !important;
+}
+
+body.theme-gray .theme-adaptive .bg-\[\#1E293B\],
+body.theme-gray .theme-adaptive .bg-\[\#0F172A\] {
+  background-color: #334155 !important;
+}
+
+body.theme-gray .theme-adaptive .text-slate-400,
+body.theme-gray .theme-adaptive .text-slate-500 {
+  color: #d1d5db !important;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
+
+/* High Density sleek scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #1E293B;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Leaflet Custom Styling */
+.custom-leaflet-tooltip {
+  background: rgba(15, 23, 42, 0.92) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 10px !important;
+  padding: 6px 12px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4) !important;
+}
+.custom-leaflet-tooltip::before {
+  border-top-color: rgba(15, 23, 42, 0.92) !important;
+}
+
+.custom-map-pin {
+  background: transparent !important;
+  border: none !important;
+}

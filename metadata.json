@@ -1,0 +1,8 @@
+{
+  "name": "سیستەمی ئەنجامی هەڵبژاردنەکان",
+  "description": "سیستەمی تۆمارکردن، شیکاری و بەراوردکاری ئەنجامەکانی هەڵبژاردنی پەرلەمانی کوردستان و ئەنجومەنی نوێنەرانی عێراق بە چارت و خول و بازنەکانەوە.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
