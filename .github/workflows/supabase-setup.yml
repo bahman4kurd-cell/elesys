@@ -1,0 +1,55 @@
+name: Supabase setup
+
+# Manual one-click setup. Runs as the postgres owner via the Session Pooler,
+# so dashboard role/permission problems do not apply.
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply table, RLS and grants
+        env:
+          PGCONN: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$PGCONN" ]; then
+            echo "::error::Missing repository secret SUPABASE_DB_URL (Supabase → Connect → Session pooler URI with password)."
+            exit 1
+          fi
+          psql "$PGCONN" -v ON_ERROR_STOP=1 -f database/supabase_direct_setup.sql
+          echo "Database setup applied."
+
+      - name: Create admin login (optional)
+        env:
+          PGCONN: ${{ secrets.SUPABASE_DB_URL }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_EMAIL: admin@elesys.local
+        run: |
+          if [ -z "$SERVICE_KEY" ] || [ -z "$ADMIN_PASSWORD" ]; then
+            echo "Skipping admin creation (SUPABASE_SERVICE_ROLE_KEY / ADMIN_PASSWORD not set)."
+            exit 0
+          fi
+          # Pooler user is "postgres.<project-ref>"; derive the project URL from it.
+          REF=$(echo "$PGCONN" | sed -n 's#.*//postgres\.\([a-z0-9]*\):.*#\1#p')
+          if [ -z "$REF" ]; then
+            echo "::warning::Could not derive project ref from SUPABASE_DB_URL; skipping admin creation."
+            exit 0
+          fi
+          URL="https://$REF.supabase.co"
+          BODY=$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p,email_confirm:true}')
+          CODE=$(curl -sS -o /tmp/resp.json -w '%{http_code}' -X POST "$URL/auth/v1/admin/users" \
+            -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" \
+            -H "Content-Type: application/json" -d "$BODY")
+          if [ "$CODE" = "200" ] || [ "$CODE" = "201" ]; then
+            echo "Admin user created: $ADMIN_EMAIL"
+          elif grep -qi 'already' /tmp/resp.json; then
+            echo "Admin user already exists: $ADMIN_EMAIL"
+          else
+            echo "::error::Admin creation failed (HTTP $CODE): $(cat /tmp/resp.json)"
+            exit 1
+          fi
+          echo "Project URL: $URL"

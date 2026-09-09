@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS public.app_state (
 
 ALTER TABLE public.app_state ENABLE ROW LEVEL SECURITY;
 
+-- Remove the permissive template policy if it was added from the dashboard.
+DROP POLICY IF EXISTS "Enable read access for all users" ON public.app_state;
+
 -- Only signed-in staff accounts (created in Authentication → Users) can read/write.
 DROP POLICY IF EXISTS "app_state_select_authenticated" ON public.app_state;
 CREATE POLICY "app_state_select_authenticated"
