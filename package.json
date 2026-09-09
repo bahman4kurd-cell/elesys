@@ -10,7 +10,7 @@
     "api:start": "tsx server/index.ts",
     "build": "vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
     "lint": "tsc --noEmit",
     "migrate:json": "tsx server/migration/importLocalJson.ts",
     "db:apply-schema": "tsx server/migration/applySchema.ts",
