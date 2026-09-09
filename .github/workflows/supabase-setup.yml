@@ -22,34 +22,20 @@ jobs:
           psql "$PGCONN" -v ON_ERROR_STOP=1 -f database/supabase_direct_setup.sql
           echo "Database setup applied."
 
-      - name: Create admin login (optional)
+      - name: Create or reset admin login
         env:
           PGCONN: ${{ secrets.SUPABASE_DB_URL }}
-          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           ADMIN_EMAIL: admin@elesys.local
         run: |
-          if [ -z "$SERVICE_KEY" ] || [ -z "$ADMIN_PASSWORD" ]; then
-            echo "Skipping admin creation (SUPABASE_SERVICE_ROLE_KEY / ADMIN_PASSWORD not set)."
+          if [ -z "$ADMIN_PASSWORD" ]; then
+            echo "Skipping admin login (ADMIN_PASSWORD secret not set)."
             exit 0
           fi
-          # Pooler user is "postgres.<project-ref>"; derive the project URL from it.
+          psql "$PGCONN" -v ON_ERROR_STOP=1 \
+            -v admin_email="$ADMIN_EMAIL" -v admin_password="$ADMIN_PASSWORD" \
+            -f database/supabase_admin_user.sql
+          # Pooler user is "postgres.<project-ref>"; print the project URL for the frontend config.
           REF=$(echo "$PGCONN" | sed -n 's#.*//postgres\.\([a-z0-9]*\):.*#\1#p')
-          if [ -z "$REF" ]; then
-            echo "::warning::Could not derive project ref from SUPABASE_DB_URL; skipping admin creation."
-            exit 0
-          fi
-          URL="https://$REF.supabase.co"
-          BODY=$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p,email_confirm:true}')
-          CODE=$(curl -sS -o /tmp/resp.json -w '%{http_code}' -X POST "$URL/auth/v1/admin/users" \
-            -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" \
-            -H "Content-Type: application/json" -d "$BODY")
-          if [ "$CODE" = "200" ] || [ "$CODE" = "201" ]; then
-            echo "Admin user created: $ADMIN_EMAIL"
-          elif grep -qi 'already' /tmp/resp.json; then
-            echo "Admin user already exists: $ADMIN_EMAIL"
-          else
-            echo "::error::Admin creation failed (HTTP $CODE): $(cat /tmp/resp.json)"
-            exit 1
-          fi
-          echo "Project URL: $URL"
+          [ -n "$REF" ] && echo "Project URL: https://$REF.supabase.co"
+          echo "Login username: admin"
