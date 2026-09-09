@@ -7,6 +7,7 @@
     "dev": "vite --port=3001 --strictPort --host=0.0.0.0",
     "dev:free-port": "fix-port-3001.bat",
     "api:dev": "tsx server/index.ts",
+    "api:start": "tsx server/index.ts",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
@@ -36,6 +37,7 @@
     "react-dom": "^19.0.1",
     "recharts": "^3.10.1",
     "tailwind-merge": "^3.6.0",
+    "tsx": "^4.21.0",
     "vite": "^6.2.3",
     "zod": "^3.25.76"
   },
@@ -49,7 +51,6 @@
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
     "tailwindcss": "^4.1.14",
-    "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.3"
   }

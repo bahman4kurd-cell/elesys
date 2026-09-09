@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StorageService } from '../services/storage';
 import { OnlineApiService } from '../services/onlineApi';
 import { Lock, User, CheckCircle2, HardDrive, KeyRound } from 'lucide-react';
@@ -17,6 +17,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    OnlineApiService.wakeUp();
+  }, []);
   const rememberUsernameIfNeeded = (value: string) => {
     if (rememberMe) localStorage.setItem('kurd_election_remembered_username', value.trim());
     else localStorage.removeItem('kurd_election_remembered_username');

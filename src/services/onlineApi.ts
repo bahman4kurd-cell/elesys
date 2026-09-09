@@ -2,6 +2,15 @@ import { AppDatabase } from '../types';
 
 const TOKEN_STORAGE_KEY = 'kurd_election_online_token';
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+// Free-tier hosts sleep when idle; first request can take ~30-50s to wake.
+const LOGIN_TIMEOUT_MS = 60000;
+const STATE_TIMEOUT_MS = 20000;
+
+function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
 
 interface LoginResponse {
   token: string;
@@ -16,6 +25,12 @@ interface LoginResponse {
 export class OnlineApiService {
   public static isEnabled(): boolean {
     return Boolean(API_BASE);
+  }
+
+  // Fire-and-forget ping so a sleeping server is already awake by the time the user submits login.
+  public static wakeUp(): void {
+    if (!this.isEnabled()) return;
+    fetchWithTimeout(`${API_BASE}/api/health`, { method: 'GET' }, LOGIN_TIMEOUT_MS).catch(() => undefined);
   }
 
   public static getToken(): string {
@@ -41,11 +56,11 @@ export class OnlineApiService {
 
     let response: Response;
     try {
-      response = await fetch(`${API_BASE}/api/auth/login`, {
+      response = await fetchWithTimeout(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, slug }),
-      });
+      }, LOGIN_TIMEOUT_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch';
       throw new Error(`Failed to fetch (${API_BASE}/api/auth/login): ${message}`);
@@ -67,12 +82,12 @@ export class OnlineApiService {
     const token = this.getToken();
     if (!token) return null;
 
-    const response = await fetch(`${API_BASE}/api/state`, {
+    const response = await fetchWithTimeout(`${API_BASE}/api/state`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    });
+    }, STATE_TIMEOUT_MS);
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -91,14 +106,14 @@ export class OnlineApiService {
     const token = this.getToken();
     if (!token) return;
 
-    const response = await fetch(`${API_BASE}/api/state`, {
+    const response = await fetchWithTimeout(`${API_BASE}/api/state`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ db }),
-    });
+    }, STATE_TIMEOUT_MS);
 
     if (!response.ok && response.status === 401) {
       this.clearToken();

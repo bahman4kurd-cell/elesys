@@ -3,9 +3,11 @@ import { getDatabaseConnectionString } from './config';
 
 const pool = new Pool({
   connectionString: getDatabaseConnectionString(),
-  max: 20,
+  // Supabase uses a managed cert chain; pg needs this to accept it.
+  ssl: { rejectUnauthorized: false },
+  max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 15000,
 });
 
 export async function query<T = unknown>(sql: string, params: unknown[] = []): Promise<QueryResult<T>> {

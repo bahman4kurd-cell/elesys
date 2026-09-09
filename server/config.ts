@@ -6,7 +6,13 @@ function toInt(value: string | undefined, fallback: number): number {
 }
 
 export const config = {
-  apiPort: toInt(process.env.API_PORT, 4000),
+  // Render/Railway inject PORT; API_PORT is for local dev.
+  apiPort: toInt(process.env.PORT || process.env.API_PORT, 4000),
+  corsOrigins: (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
+  autoBootstrap: String(process.env.AUTO_BOOTSTRAP || 'true').toLowerCase() === 'true',
   appInstanceSlug: process.env.APP_INSTANCE_SLUG || 'main',
   jwtSecret: process.env.JWT_SECRET || 'dev-only-secret-change-me',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',

@@ -7,10 +7,19 @@ import { authRouter } from './routes/auth';
 import { dashboardRouter } from './routes/dashboard';
 import { stateRouter } from './routes/state';
 import { requireAuth } from './middleware/requireAuth';
+import { bootstrapDatabase } from './bootstrap';
 
 const app = express();
 
-app.use(cors({ origin: true, credentials: true }));
+const allowedOrigins = config.corsOrigins;
+app.use(
+  cors({
+    origin: allowedOrigins.length
+      ? (origin, cb) => cb(null, !origin || allowedOrigins.includes(origin))
+      : true,
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: '2mb' }));
 
 app.get('/', (_req, res) => {
@@ -27,6 +36,18 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(config.apiPort, () => {
-  console.log(`API server running on http://localhost:${config.apiPort}`);
-});
+async function start(): Promise<void> {
+  if (config.autoBootstrap) {
+    try {
+      await bootstrapDatabase();
+    } catch (error) {
+      console.error('Database bootstrap failed (API will still start):', error);
+    }
+  }
+
+  app.listen(config.apiPort, () => {
+    console.log(`API server running on port ${config.apiPort}`);
+  });
+}
+
+void start();

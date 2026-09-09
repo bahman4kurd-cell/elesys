@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: elesys-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install --no-audit --no-fund
+    startCommand: npm run api:start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AUTO_BOOTSTRAP
+        value: "true"
+      - key: APP_INSTANCE_SLUG
+        value: main
+      - key: CORS_ORIGINS
+        value: https://bahman4kurd-cell.github.io
+      - key: JWT_EXPIRES_IN
+        value: 12h
+      - key: JWT_SECRET
+        generateValue: true
+      - key: BOOTSTRAP_ADMIN_KEY
+        generateValue: true
+      - key: ONLINE_ADMIN_USERNAME
+        value: admin
+      - key: ONLINE_ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
