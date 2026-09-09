@@ -11,20 +11,58 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Apply table, RLS and grants
+      - name: Normalize connection string
         env:
-          PGCONN: ${{ secrets.SUPABASE_DB_URL }}
+          RAW_CONN: ${{ secrets.SUPABASE_DB_URL }}
+          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          if [ -z "$PGCONN" ]; then
-            echo "::error::Missing repository secret SUPABASE_DB_URL (Supabase → Connect → Session pooler URI with password)."
+          set -e
+          if [ -z "$RAW_CONN" ]; then
+            echo "::error::Missing secret SUPABASE_DB_URL."
             exit 1
           fi
+          # Trim whitespace/newlines and surrounding quotes.
+          CONN="$(printf '%s' "$RAW_CONN" | tr -d '\r\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e "s/^['\"]//" -e "s/['\"]\$//")"
+
+          # Accept the "psql -h ... -p ... -d ... -U ..." format from the Supabase dialog.
+          if printf '%s' "$CONN" | grep -q '^psql'; then
+            H=$(printf '%s' "$CONN" | sed -n 's/.*-h[ =]\([^ ]*\).*/\1/p')
+            P=$(printf '%s' "$CONN" | sed -n 's/.*-p[ =]\([^ ]*\).*/\1/p')
+            D=$(printf '%s' "$CONN" | sed -n 's/.*-d[ =]\([^ ]*\).*/\1/p')
+            U=$(printf '%s' "$CONN" | sed -n 's/.*-U[ =]\([^ ]*\).*/\1/p')
+            CONN="postgresql://${U}:[YOUR-PASSWORD]@${H}:${P:-5432}/${D:-postgres}"
+          fi
+
+          # Fill in the password placeholder from the separate secret.
+          if printf '%s' "$CONN" | grep -q '\[YOUR-PASSWORD\]'; then
+            if [ -z "$DB_PASSWORD" ]; then
+              echo "::error::SUPABASE_DB_URL still contains [YOUR-PASSWORD]. Add secret SUPABASE_DB_PASSWORD with your database password."
+              exit 1
+            fi
+            ENC=$(printf '%s' "$DB_PASSWORD" | jq -sRr @uri)
+            CONN="${CONN//\[YOUR-PASSWORD\]/$ENC}"
+          fi
+
+          case "$CONN" in
+            postgres://*|postgresql://*) ;;
+            *) echo "::error::SUPABASE_DB_URL must start with postgresql:// (got: ${CONN:0:12}...)"; exit 1 ;;
+          esac
+
+          case "$CONN" in *sslmode=*) ;; *)
+            if printf '%s' "$CONN" | grep -q '?'; then CONN="$CONN&sslmode=require"; else CONN="$CONN?sslmode=require"; fi ;;
+          esac
+
+          echo "::add-mask::$CONN"
+          echo "PGCONN=$CONN" >> "$GITHUB_ENV"
+          echo "Connection string OK (host: $(printf '%s' "$CONN" | sed -n 's#.*@\([^:/]*\).*#\1#p'))"
+
+      - name: Apply table, RLS and grants
+        run: |
           psql "$PGCONN" -v ON_ERROR_STOP=1 -f database/supabase_direct_setup.sql
           echo "Database setup applied."
 
       - name: Create or reset admin login
         env:
-          PGCONN: ${{ secrets.SUPABASE_DB_URL }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           ADMIN_EMAIL: admin@elesys.local
         run: |
