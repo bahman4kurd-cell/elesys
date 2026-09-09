@@ -1,0 +1,90 @@
+name: Supabase setup
+
+# Manual one-click setup. Runs as the postgres owner via the Session Pooler,
+# so dashboard role/permission problems do not apply.
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Normalize connection string
+        env:
+          RAW_CONN: ${{ secrets.SUPABASE_DB_URL }}
+          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -e
+          # Simplest path: project ref + password → build the Session Pooler URI ourselves.
+          if [ -n "$PROJECT_REF" ] && [ -n "$DB_PASSWORD" ]; then
+            REF="$(printf '%s' "$PROJECT_REF" | tr -d '\r\n ' | sed -e 's#^https\?://##' -e 's#\.supabase\.co.*$##')"
+            ENC=$(printf '%s' "$DB_PASSWORD" | jq -sRr @uri)
+            RAW_CONN="postgresql://postgres.${REF}:${ENC}@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+            for R in ap-southeast-1 eu-central-1 us-east-1 us-west-1 eu-west-1 eu-west-2 ap-northeast-1 ap-south-1 sa-east-1 ca-central-1 ap-southeast-2 us-east-2; do
+              C="postgresql://postgres.${REF}:${ENC}@aws-0-${R}.pooler.supabase.com:5432/postgres?sslmode=require"
+              if psql "$C" -c 'select 1' >/dev/null 2>&1; then RAW_CONN="$C"; echo "Pooler region: $R"; break; fi
+            done
+          fi
+          if [ -z "$RAW_CONN" ]; then
+            echo "::error::Add secrets SUPABASE_PROJECT_REF and SUPABASE_DB_PASSWORD (or SUPABASE_DB_URL)."
+            exit 1
+          fi
+          # Trim whitespace/newlines and surrounding quotes.
+          CONN="$(printf '%s' "$RAW_CONN" | tr -d '\r\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e "s/^['\"]//" -e "s/['\"]\$//")"
+
+          # Accept the "psql -h ... -p ... -d ... -U ..." format from the Supabase dialog.
+          if printf '%s' "$CONN" | grep -q '^psql'; then
+            H=$(printf '%s' "$CONN" | sed -n 's/.*-h[ =]\([^ ]*\).*/\1/p')
+            P=$(printf '%s' "$CONN" | sed -n 's/.*-p[ =]\([^ ]*\).*/\1/p')
+            D=$(printf '%s' "$CONN" | sed -n 's/.*-d[ =]\([^ ]*\).*/\1/p')
+            U=$(printf '%s' "$CONN" | sed -n 's/.*-U[ =]\([^ ]*\).*/\1/p')
+            CONN="postgresql://${U}:[YOUR-PASSWORD]@${H}:${P:-5432}/${D:-postgres}"
+          fi
+
+          # Fill in the password placeholder from the separate secret.
+          if printf '%s' "$CONN" | grep -q '\[YOUR-PASSWORD\]'; then
+            if [ -z "$DB_PASSWORD" ]; then
+              echo "::error::SUPABASE_DB_URL still contains [YOUR-PASSWORD]. Add secret SUPABASE_DB_PASSWORD with your database password."
+              exit 1
+            fi
+            ENC=$(printf '%s' "$DB_PASSWORD" | jq -sRr @uri)
+            CONN="${CONN//\[YOUR-PASSWORD\]/$ENC}"
+          fi
+
+          case "$CONN" in
+            postgres://*|postgresql://*) ;;
+            *) echo "::error::SUPABASE_DB_URL must start with postgresql:// (got: ${CONN:0:12}...)"; exit 1 ;;
+          esac
+
+          case "$CONN" in *sslmode=*) ;; *)
+            if printf '%s' "$CONN" | grep -q '?'; then CONN="$CONN&sslmode=require"; else CONN="$CONN?sslmode=require"; fi ;;
+          esac
+
+          echo "::add-mask::$CONN"
+          echo "PGCONN=$CONN" >> "$GITHUB_ENV"
+          echo "Connection string OK (host: $(printf '%s' "$CONN" | sed -n 's#.*@\([^:/]*\).*#\1#p'))"
+
+      - name: Apply table, RLS and grants
+        run: |
+          psql "$PGCONN" -v ON_ERROR_STOP=1 -f database/supabase_direct_setup.sql
+          echo "Database setup applied."
+
+      - name: Create or reset admin login
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_EMAIL: admin@elesys.local
+        run: |
+          if [ -z "$ADMIN_PASSWORD" ]; then
+            echo "Skipping admin login (ADMIN_PASSWORD secret not set)."
+            exit 0
+          fi
+          psql "$PGCONN" -v ON_ERROR_STOP=1 \
+            -v admin_email="$ADMIN_EMAIL" -v admin_password="$ADMIN_PASSWORD" \
+            -f database/supabase_admin_user.sql
+          # Pooler user is "postgres.<project-ref>"; print the project URL for the frontend config.
+          REF=$(echo "$PGCONN" | sed -n 's#.*//postgres\.\([a-z0-9]*\):.*#\1#p')
+          [ -n "$REF" ] && echo "Project URL: https://$REF.supabase.co"
+          echo "Login username: admin"
