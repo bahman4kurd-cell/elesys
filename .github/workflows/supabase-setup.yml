@@ -15,10 +15,21 @@ jobs:
         env:
           RAW_CONN: ${{ secrets.SUPABASE_DB_URL }}
           DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
           set -e
+          # Simplest path: project ref + password → build the Session Pooler URI ourselves.
+          if [ -n "$PROJECT_REF" ] && [ -n "$DB_PASSWORD" ]; then
+            REF="$(printf '%s' "$PROJECT_REF" | tr -d '\r\n ' | sed -e 's#^https\?://##' -e 's#\.supabase\.co.*$##')"
+            ENC=$(printf '%s' "$DB_PASSWORD" | jq -sRr @uri)
+            RAW_CONN="postgresql://postgres.${REF}:${ENC}@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+            for R in ap-southeast-1 eu-central-1 us-east-1 us-west-1 eu-west-1 eu-west-2 ap-northeast-1 ap-south-1 sa-east-1 ca-central-1 ap-southeast-2 us-east-2; do
+              C="postgresql://postgres.${REF}:${ENC}@aws-0-${R}.pooler.supabase.com:5432/postgres?sslmode=require"
+              if psql "$C" -c 'select 1' >/dev/null 2>&1; then RAW_CONN="$C"; echo "Pooler region: $R"; break; fi
+            done
+          fi
           if [ -z "$RAW_CONN" ]; then
-            echo "::error::Missing secret SUPABASE_DB_URL."
+            echo "::error::Add secrets SUPABASE_PROJECT_REF and SUPABASE_DB_PASSWORD (or SUPABASE_DB_URL)."
             exit 1
           fi
           # Trim whitespace/newlines and surrounding quotes.
