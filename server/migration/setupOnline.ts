@@ -35,6 +35,7 @@ async function run(): Promise<void> {
 
     const passwordHash = await hashPassword(config.onlineAdminPassword);
 
+    // زیادکردنی یوزەری ئەمین (Admin)
     await client.query(
       `
       INSERT INTO app_users (instance_id, username, password_hash, role, is_active)
@@ -43,6 +44,18 @@ async function run(): Promise<void> {
       DO UPDATE SET password_hash = EXCLUDED.password_hash, is_active = TRUE
       `,
       [instanceId, config.onlineAdminUsername, passwordHash]
+    );
+
+    // زیادکردنی یوزەری تەنها بینەر (Viewer) بۆ بینینی داتاکان بەبێ دەسەڵاتی دەستکاری
+    const viewerPasswordHash = await hashPassword('viewer123'); // دەتوانیت پاسوۆردەکەی لێرە بگۆڕیت
+    await client.query(
+      `
+      INSERT INTO app_users (instance_id, username, password_hash, role, is_active)
+      VALUES ($1, $2, $3, 'viewer', TRUE)
+      ON CONFLICT (instance_id, username)
+      DO UPDATE SET password_hash = EXCLUDED.password_hash, is_active = TRUE
+      `,
+      [instanceId, 'viewer', viewerPasswordHash]
     );
 
     await client.query(
@@ -56,9 +69,10 @@ async function run(): Promise<void> {
 
     await client.query('COMMIT');
 
-    console.log('Online setup completed.');
-    console.log(`Instance slug: ${config.appInstanceSlug}`);
-    console.log(`Admin username: ${config.onlineAdminUsername}`);
+    console.log('Online setup completed. - setupOnline.ts:72');
+    console.log(`Instance slug: ${config.appInstanceSlug} - setupOnline.ts:73`);
+    console.log(`Admin username: ${config.onlineAdminUsername} - setupOnline.ts:74`);
+    console.log(`Viewer username: viewer (Password: viewer123) - setupOnline.ts:75`);
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -69,6 +83,6 @@ async function run(): Promise<void> {
 }
 
 run().catch((error) => {
-  console.error('Online setup failed:', error);
+  console.error('Online setup failed: - setupOnline.ts:86', error);
   process.exit(1);
 });

@@ -92,15 +92,14 @@ export default function App() {
   }, [currentTheme, currentLanguage]);
 
   const handleLoginSuccess = (username: string) => {
-    const newAuthState = { isAuthenticated: true, username, lastLogin: new Date().toISOString() };
-    setAuthState(newAuthState);
-    StorageService.setAuthState(newAuthState);
+    const fullAuth = StorageService.getAuthState();
+    setAuthState(fullAuth.isAuthenticated ? fullAuth : { isAuthenticated: true, username, role: 'admin' });
   };
 
   const handleLogout = () => {
     StorageService.logout();
     OnlineApiService.clearToken();
-    setAuthState({ isAuthenticated: false, username: '', lastLogin: '' });
+    setAuthState({ isAuthenticated: false, username: '', role: 'admin' });
   };
 
   useEffect(() => {
@@ -172,9 +171,17 @@ export default function App() {
   const activeRound = db.rounds.find((r) => r.id === db.activeRoundId) || db.rounds[0];
   const isDashboardActive = db.activeRoundId === 'dashboard';
   const legacyBranchNames = new Set(['لقی سەرەکی', 'بنچینە']);
-  const branches: ElectionBranch[] = (activeRound?.branches ?? []).filter(
+  
+  const allBranches: ElectionBranch[] = (activeRound?.branches ?? []).filter(
     (branch) => !legacyBranchNames.has((branch.name || '').trim())
   );
+
+  const isLimitedUser = (authState.role === 'viewer' || authState.role === 'admin') && authState.allowedBranchId;
+  
+  const branches = isLimitedUser
+    ? allBranches.filter((b) => b.id === authState.allowedBranchId)
+    : allBranches;
+
   const selectedBranch = branches.find((b) => b.id === activeBranchId) || branches[0];
   const activeSubTab =
     selectedBranch?.subTabs.find((st) => st.id === selectedBranch.activeSubTabId) ||
@@ -209,11 +216,14 @@ export default function App() {
     });
   };
 
+  const canModifyGlobal = authState.role !== 'viewer' && authState.role !== 'admin';
+
   const handleAddRound = (
     title: string,
     category: 'kurdistan' | 'iraq' | 'provincial' | 'custom',
     year: number
   ) => {
+    if (!canModifyGlobal) return; 
     const roundId = `round-${Date.now()}`;
     const newRound: ElectionRound = {
       id: roundId,
@@ -233,6 +243,7 @@ export default function App() {
   };
 
   const handleEditRound = (roundId: string, newTitle: string) => {
+    if (!canModifyGlobal) return;
     updateDbState({
       ...db,
       rounds: db.rounds.map((r) => (r.id === roundId ? { ...r, title: newTitle } : r)),
@@ -240,6 +251,7 @@ export default function App() {
   };
 
   const handleDeleteRound = (roundId: string) => {
+    if (!canModifyGlobal) return;
     const filteredRounds = db.rounds.filter((r) => r.id !== roundId);
     if (filteredRounds.length === 0) return;
     updateDbState({
@@ -250,6 +262,7 @@ export default function App() {
   };
 
   const handleReorderRounds = (fromRoundId: string, toRoundId: string) => {
+    if (!canModifyGlobal) return;
     if (fromRoundId === toRoundId) return;
 
     const fromIndex = db.rounds.findIndex((round) => round.id === fromRoundId);
@@ -271,6 +284,7 @@ export default function App() {
   };
 
   const handleAddBranch = (name: string) => {
+    if (!canModifyGlobal) return;
     if (!activeRound) return;
 
     const initialSubTabId = `subtab-${Date.now()}`;
@@ -298,7 +312,7 @@ export default function App() {
       activeSubTabId: initialSubTabId,
     };
 
-    const updatedBranches = [...branches, newBranch];
+    const updatedBranches = [...allBranches, newBranch];
     updateActiveRound({
       branches: updatedBranches,
       subTabs: updatedBranches.flatMap((b) => b.subTabs),
@@ -310,7 +324,8 @@ export default function App() {
   };
 
   const handleEditBranch = (branchId: string, newName: string) => {
-    const updatedBranches = branches.map((b) => (b.id === branchId ? { ...b, name: newName } : b));
+    if (!canModifyGlobal) return;
+    const updatedBranches = allBranches.map((b) => (b.id === branchId ? { ...b, name: newName } : b));
     updateActiveRound({
       branches: updatedBranches,
       subTabs: updatedBranches.flatMap((b) => b.subTabs),
@@ -319,7 +334,8 @@ export default function App() {
   };
 
   const handleDeleteBranch = (branchId: string) => {
-    const updatedBranches = branches.filter((b) => b.id !== branchId);
+    if (!canModifyGlobal) return;
+    const updatedBranches = allBranches.filter((b) => b.id !== branchId);
     const nextActiveBranchId = updatedBranches[0]?.id || '';
     updateActiveRound({
       branches: updatedBranches,
@@ -330,9 +346,13 @@ export default function App() {
   };
 
   const handleUpdateSubTab = (updatedSubTab: SubTab) => {
+    if (authState.role === 'viewer') return;
     if (!selectedBranch) return;
+    if (authState.role === 'admin' && authState.allowedBranchId && selectedBranch.id !== authState.allowedBranchId) {
+      return;
+    }
 
-    const updatedBranches = branches.map((b) => {
+    const updatedBranches = allBranches.map((b) => {
       if (b.id !== selectedBranch.id) return b;
       return {
         ...b,
@@ -349,7 +369,7 @@ export default function App() {
 
   const handleSelectSubTab = (subTabId: string) => {
     if (!selectedBranch || !activeRound) return;
-    const updatedBranches = branches.map((b) =>
+    const updatedBranches = allBranches.map((b) =>
       b.id === selectedBranch.id ? { ...b, activeSubTabId: subTabId } : b
     );
     updateActiveRound({
@@ -360,7 +380,11 @@ export default function App() {
   };
 
   const handleAddSubTab = (name: string) => {
+    if (authState.role === 'viewer') return;
     if (!selectedBranch || !activeRound) return;
+    if (authState.role === 'admin' && authState.allowedBranchId && selectedBranch.id !== authState.allowedBranchId) {
+      return;
+    }
 
     const newSubTabId = `subtab-${Date.now()}`;
     const newSubTab: SubTab = {
@@ -374,7 +398,7 @@ export default function App() {
       selectedChartType: 'bar',
     };
 
-    const updatedBranches = branches.map((b) =>
+    const updatedBranches = allBranches.map((b) =>
       b.id === selectedBranch.id
         ? {
             ...b,
@@ -393,9 +417,13 @@ export default function App() {
   };
 
   const handleEditSubTab = (subTabId: string, newName: string) => {
+    if (authState.role === 'viewer') return;
     if (!selectedBranch || !activeRound) return;
+    if (authState.role === 'admin' && authState.allowedBranchId && selectedBranch.id !== authState.allowedBranchId) {
+      return;
+    }
 
-    const updatedBranches = branches.map((b) =>
+    const updatedBranches = allBranches.map((b) =>
       b.id === selectedBranch.id
         ? {
             ...b,
@@ -412,9 +440,13 @@ export default function App() {
   };
 
   const handleDeleteSubTab = (subTabId: string) => {
+    if (authState.role === 'viewer') return;
     if (!selectedBranch || !activeRound) return;
+    if (authState.role === 'admin' && authState.allowedBranchId && selectedBranch.id !== authState.allowedBranchId) {
+      return;
+    }
 
-    const updatedBranches = branches.map((b) => {
+    const updatedBranches = allBranches.map((b) => {
       if (b.id !== selectedBranch.id) return b;
       const filteredSubTabs = b.subTabs.filter((st) => st.id !== subTabId);
       const nextActiveSubTabId = filteredSubTabs[0]?.id || '';
@@ -437,6 +469,7 @@ export default function App() {
   };
 
   const handleAddCustomParty = (name: string, color: string) => {
+    if (!canModifyGlobal) return;
     const newParty: Party = {
       id: `custom-${Date.now()}`,
       name,
@@ -451,6 +484,7 @@ export default function App() {
   };
 
   const handleResetDatabase = () => {
+    if (!canModifyGlobal) return;
     if (window.confirm('ئایا دڵنیایت لە ڕیستکردنی تەواوی داتابەیس؟ سەرجەم جۆل و دەنگەکان دەسڕدرێنەوە!')) {
       const fresh = StorageService.resetToDefault();
       setDb(fresh);
@@ -485,10 +519,10 @@ export default function App() {
                   rounds={db.rounds}
                   activeRoundId={db.activeRoundId}
                   onSelectRound={handleSelectRound}
-                  onAddRound={handleAddRound}
-                  onEditRound={handleEditRound}
-                  onDeleteRound={handleDeleteRound}
-                  onReorderRounds={handleReorderRounds}
+                  onAddRound={authState.role === 'viewer' ? undefined : (canModifyGlobal ? handleAddRound : undefined)}
+                  onEditRound={authState.role === 'viewer' ? undefined : (canModifyGlobal ? handleEditRound : undefined)}
+                  onDeleteRound={authState.role === 'viewer' ? undefined : (canModifyGlobal ? handleDeleteRound : undefined)}
+                  onReorderRounds={authState.role === 'viewer' ? undefined : (canModifyGlobal ? handleReorderRounds : undefined)}
                 />
               </aside>
 
@@ -509,10 +543,10 @@ export default function App() {
                   rounds={db.rounds}
                   activeRoundId={db.activeRoundId}
                   onSelectRound={handleSelectRound}
-                  onAddRound={handleAddRound}
-                  onEditRound={handleEditRound}
-                  onDeleteRound={handleDeleteRound}
-                  onReorderRounds={handleReorderRounds}
+                  onAddRound={authState.role === 'viewer' ? undefined : (canModifyGlobal ? handleAddRound : undefined)}
+                  onEditRound={authState.role === 'viewer' ? undefined : (canModifyGlobal ? handleEditRound : undefined)}
+                  onDeleteRound={authState.role === 'viewer' ? undefined : (canModifyGlobal ? handleDeleteRound : undefined)}
+                  onReorderRounds={authState.role === 'viewer' ? undefined : (canModifyGlobal ? handleReorderRounds : undefined)}
                 />
               </aside>
 
@@ -522,9 +556,9 @@ export default function App() {
                     round={activeRound}
                     activeBranchId={activeBranchId}
                     onSelectBranch={handleSelectBranch}
-                    onAddBranch={handleAddBranch}
-                    onEditBranch={handleEditBranch}
-                    onDeleteBranch={handleDeleteBranch}
+                    onAddBranch={authState.role === 'viewer' ? undefined : (canModifyGlobal ? handleAddBranch : undefined)}
+                    onEditBranch={authState.role === 'viewer' ? undefined : (canModifyGlobal ? handleEditBranch : undefined)}
+                    onDeleteBranch={authState.role === 'viewer' ? undefined : (canModifyGlobal ? handleDeleteBranch : undefined)}
                   />
                 )}
                   {selectedBranch && (
@@ -532,9 +566,9 @@ export default function App() {
                       subTabs={selectedBranch.subTabs}
                       activeSubTabId={selectedBranch.activeSubTabId}
                       onSelectSubTab={handleSelectSubTab}
-                      onAddSubTab={handleAddSubTab}
-                      onEditSubTab={handleEditSubTab}
-                      onDeleteSubTab={handleDeleteSubTab}
+                      onAddSubTab={authState.role === 'viewer' ? undefined : handleAddSubTab}
+                      onEditSubTab={authState.role === 'viewer' ? undefined : handleEditSubTab}
+                      onDeleteSubTab={authState.role === 'viewer' ? undefined : handleDeleteSubTab}
                     />
                   )}
 
@@ -543,6 +577,7 @@ export default function App() {
                     <SubTabCharts
                       subTab={activeSubTab}
                       onSelectChartType={(type: ChartType) => {
+                        if (authState.role === 'viewer') return;
                         handleUpdateSubTab({
                           ...activeSubTab,
                           selectedChartType: type,
@@ -554,8 +589,9 @@ export default function App() {
                       subTab={activeSubTab}
                       customParties={db.customParties || []}
                       useKurdishNumerals={db.settings?.useKurdishNumerals ?? false}
-                      onUpdateSubTab={handleUpdateSubTab}
-                      onAddCustomParty={handleAddCustomParty}
+                      currentUserRole={authState.role}
+                      onUpdateSubTab={authState.role === 'viewer' ? () => {} : handleUpdateSubTab}
+                      onAddCustomParty={authState.role === 'viewer' ? undefined : (canModifyGlobal ? handleAddCustomParty : undefined)}
                       key={openSubTabCreatorVersion}
                     />
                   </>
@@ -577,7 +613,7 @@ export default function App() {
           ? 'border-t border-slate-700 bg-slate-800 text-slate-300'
           : 'border-t border-slate-800 bg-slate-950 text-slate-500'
       }`}>
-        سیستەمی شیکاری ئەنجامەکانی هەڵبژاردن © 2026 | دروستکردنی: بەهمەن دەروێش علی/یەکەی ئایتی-لقی چوار
+        سیستەمی شیکاری ئەنجامەکانی هەڵبژاردن © 2026 | دروستکردنی: بەهمەن دەروێش علی
       </footer>
 
       {showSettings && (
@@ -586,6 +622,8 @@ export default function App() {
           onUpdateDb={updateDbState}
           onResetDb={handleResetDatabase}
           onClose={() => setShowSettings(false)}
+          currentUserRole={authState.role}
+          currentUsername={authState.username}
         />
       )}
 

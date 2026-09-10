@@ -8,10 +8,10 @@ interface RoundTabsProps {
   rounds: ElectionRound[];
   activeRoundId: string;
   onSelectRound: (roundId: string) => void;
-  onAddRound: (title: string, category: 'kurdistan' | 'iraq' | 'provincial' | 'custom', year: number) => void;
-  onEditRound: (roundId: string, newTitle: string) => void;
-  onDeleteRound: (roundId: string) => void;
-  onReorderRounds: (fromRoundId: string, toRoundId: string) => void;
+  onAddRound?: (title: string, category: 'kurdistan' | 'iraq' | 'provincial' | 'custom', year: number) => void;
+  onEditRound?: (roundId: string, newTitle: string) => void;
+  onDeleteRound?: (roundId: string) => void;
+  onReorderRounds?: (fromRoundId: string, toRoundId: string) => void;
 }
 
 export const RoundTabs: React.FC<RoundTabsProps> = ({
@@ -37,6 +37,7 @@ export const RoundTabs: React.FC<RoundTabsProps> = ({
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!onAddRound) return;
     const title = newTitle.trim();
     if (!title) return;
 
@@ -50,11 +51,13 @@ export const RoundTabs: React.FC<RoundTabsProps> = ({
 
   const startEdit = (round: ElectionRound, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!onEditRound) return;
     setEditingRoundId(round.id);
     setEditTitleText(round.title);
   };
 
   const saveEdit = (roundId: string) => {
+    if (!onEditRound) return;
     const title = editTitleText.trim();
     if (!title) return;
     onEditRound(roundId, title);
@@ -63,23 +66,27 @@ export const RoundTabs: React.FC<RoundTabsProps> = ({
 
   const handleDelete = (roundId: string, roundTitle: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!onDeleteRound) return;
     if (window.confirm(`دڵنیایت لە سڕینەوەی "${roundTitle}"؟`)) {
       onDeleteRound(roundId);
     }
   };
 
   const handleDragStart = (roundId: string) => {
+    if (!onReorderRounds) return;
     setDraggingRoundId(roundId);
   };
 
   const handleDragOver = (e: React.DragEvent, roundId: string) => {
     e.preventDefault();
+    if (!onReorderRounds) return;
     if (!draggingRoundId || draggingRoundId === roundId) return;
     setDragOverRoundId(roundId);
   };
 
   const handleDrop = (e: React.DragEvent, roundId: string) => {
     e.preventDefault();
+    if (!onReorderRounds) return;
     if (draggingRoundId && draggingRoundId !== roundId) {
       onReorderRounds(draggingRoundId, roundId);
     }
@@ -192,14 +199,16 @@ export const RoundTabs: React.FC<RoundTabsProps> = ({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          title="زیادکردنی خول"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#d5a438] text-[#082b5a] transition-colors hover:bg-[#e5bd52] focus:outline-none focus:ring-2 focus:ring-[#e5c26b]"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
+        {onAddRound && (
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            title="زیادکردنی خول"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#d5a438] text-[#082b5a] transition-colors hover:bg-[#e5bd52] focus:outline-none focus:ring-2 focus:ring-[#e5c26b]"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        )}
       </header>
 
       <nav className="max-h-[60vh] space-y-1 overflow-y-auto p-2" aria-label={t('roundLabel')}>
@@ -258,7 +267,7 @@ export const RoundTabs: React.FC<RoundTabsProps> = ({
           return (
             <div
               key={round.id}
-              draggable
+              draggable={!!onReorderRounds}
               onDragStart={() => handleDragStart(round.id)}
               onDragOver={(e) => handleDragOver(e, round.id)}
               onDrop={(e) => handleDrop(e, round.id)}
@@ -286,29 +295,33 @@ export const RoundTabs: React.FC<RoundTabsProps> = ({
                 </span>
               </button>
 
-              <div className="flex shrink-0 items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={(e) => startEdit(round, e)}
-                  title="دەستکاریکردنی ناوی خول"
-                  aria-label="دەستکاریکردنی ناوی خول"
-                  className="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-slate-700 hover:text-blue-300"
-                >
-                  <Edit3 className="h-3.5 w-3.5" />
-                </button>
+              {(onEditRound || onDeleteRound) && (
+                <div className="flex shrink-0 items-center gap-0.5">
+                  {onEditRound && (
+                    <button
+                      type="button"
+                      onClick={(e) => startEdit(round, e)}
+                      title="دەستکاریکردنی ناوی خول"
+                      aria-label="دەستکاریکردنی ناوی خول"
+                      className="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-slate-700 hover:text-blue-300"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
 
-                {rounds.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={(e) => handleDelete(round.id, round.title, e)}
-                    title="سڕینەوەی ئەم خولە"
-                    aria-label="سڕینەوەی ئەم خولە"
-                    className="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-rose-950/50 hover:text-rose-300"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
+                  {onDeleteRound && rounds.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleDelete(round.id, round.title, e)}
+                      title="سڕینەوەی ئەم خولە"
+                      aria-label="سڕینەوەی ئەم خولە"
+                      className="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-rose-950/50 hover:text-rose-300"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

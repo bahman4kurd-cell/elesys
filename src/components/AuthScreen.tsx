@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { StorageService } from '../services/storage';
 import { OnlineApiService } from '../services/onlineApi';
-import { Lock, User, CheckCircle2, HardDrive, KeyRound } from 'lucide-react';
+import { Lock, User, HardDrive, KeyRound } from 'lucide-react';
 import { t } from '../i18n';
-import logoUrl from '../logo.ico.ico';
 
 interface AuthScreenProps {
   onLoginSuccess: (username: string) => void;
@@ -20,6 +19,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   useEffect(() => {
     OnlineApiService.wakeUp();
   }, []);
+
   const rememberUsernameIfNeeded = (value: string) => {
     if (rememberMe) localStorage.setItem('kurd_election_remembered_username', value.trim());
     else localStorage.removeItem('kurd_election_remembered_username');
@@ -52,7 +52,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             setIsLoading(false);
             return;
           } catch (onlineError) {
-            // Keep the app usable: whenever online auth fails, attempt local fallback.
             const onlineMessage = onlineError instanceof Error ? onlineError.message : 'Online login failed';
             const loggedIn = tryLocalLogin(`Online login هەڵەی هەبوو (${onlineMessage})؛ local login ـیش سەرکەوتوو نەبوو.`);
             if (loggedIn) {
@@ -80,16 +79,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         {/* Header Branding */}
         <div className="text-center space-y-2.5">
           <div className="inline-flex p-3 rounded-2xl bg-blue-600/10 border border-blue-500/20 text-blue-400 shadow-inner">
-            <img src={logoUrl} alt="System Logo" className="w-9 h-9 object-contain" />
+            <Lock className="w-8 h-8" />
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
             {t('loginTitle')}
           </h1>
           <p className="text-xs text-slate-400">
-            پەرلەمانی کوردستان و ئەنجومەنی نوێنەرانی عێراق (کارکردنی ١٠٠٪ ئۆفلاین)
+            مێژوی هەڵبژاردنەکانی (کوردستان و عێراق)
           </p>
           <p className="text-[11px] text-amber-300">
-            دروستکردنی: بەهمەن دەروێش علی/یەکەی ئایتی-لقی چوار
+            دروستکردنی: بەهمەن دەروێش علی
           </p>
         </div>
 
@@ -149,13 +148,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               </>
             )}
           </button>
+          
           <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
             <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} className="accent-blue-600" />
             <span>بیرت بهێنەوەی ناوی بەکارهێنەر</span>
           </label>
+          
           <button type="button" onClick={() => setShowRecovery((value) => !value)} className="w-full text-xs text-blue-400 hover:text-blue-300">
             وشەی نهێنی لەبیرچووە؟
           </button>
+          
           {showRecovery && (
             <div className="text-xs text-amber-300 text-center border border-amber-500/20 rounded-lg p-2 space-y-2">
               <p>لە کاری ئۆفلاین، ئەگەر credentials ـەکانت لەبیرچوون، دەتوانیت بە reset ـی بنەڕەتی بگەڕێیتەوە.</p>
@@ -176,7 +178,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         <div className="pt-3 border-t border-slate-700 text-xs text-slate-400 space-y-2">
           <div className="flex items-center gap-2 text-emerald-400 text-[11px] font-medium">
             <HardDrive className="w-3.5 h-3.5 shrink-0" />
-            <span>سیستەمەکە بەتەواوی ئۆفلاین کاردەکات و دەتوانرێت بخرێتە سەر فلاش میمۆری.</span>
+            <span>داتا سەنتەری هەڵبژاردن</span>
           </div>
         </div>
 

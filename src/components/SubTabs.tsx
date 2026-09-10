@@ -7,9 +7,9 @@ interface SubTabsProps {
   subTabs: SubTab[];
   activeSubTabId: string;
   onSelectSubTab: (subTabId: string) => void;
-  onAddSubTab: (name: string) => void;
-  onEditSubTab: (subTabId: string, newName: string) => void;
-  onDeleteSubTab: (subTabId: string) => void;
+  onAddSubTab?: (name: string) => void;
+  onEditSubTab?: (subTabId: string, newName: string) => void;
+  onDeleteSubTab?: (subTabId: string) => void;
 }
 
 export const SubTabs: React.FC<SubTabsProps> = ({
@@ -28,6 +28,7 @@ export const SubTabs: React.FC<SubTabsProps> = ({
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!onAddSubTab) return;
     if (!newSubTabName.trim()) return;
     onAddSubTab(newSubTabName.trim());
     setNewSubTabName('');
@@ -36,11 +37,13 @@ export const SubTabs: React.FC<SubTabsProps> = ({
 
   const startEdit = (st: SubTab, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!onEditSubTab) return;
     setEditingId(st.id);
     setEditNameText(st.name);
   };
 
   const saveEdit = (stId: string) => {
+    if (!onEditSubTab) return;
     if (editNameText.trim()) {
       onEditSubTab(stId, editNameText.trim());
     }
@@ -49,6 +52,7 @@ export const SubTabs: React.FC<SubTabsProps> = ({
 
   const handleDelete = (stId: string, name: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!onDeleteSubTab) return;
     if (window.confirm(`ئایا دڵنیایت لە سڕینەوەی سەب تابی "${name}"؟`)) {
       onDeleteSubTab(stId);
     }
@@ -105,24 +109,28 @@ export const SubTabs: React.FC<SubTabsProps> = ({
               >
                 <span>{st.name}</span>
 
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity mr-1">
-                  <button
-                    onClick={(e) => startEdit(st, e)}
-                    title="دەستکاری ناو"
-                    className="p-0.5 text-slate-400 hover:text-blue-300"
-                  >
-                    <Edit2 className="w-2.5 h-2.5" />
-                  </button>
-                  {subTabs.length > 1 && (
-                    <button
-                      onClick={(e) => handleDelete(st.id, st.name, e)}
-                      title="سڕینەوە"
-                      className="p-0.5 text-slate-400 hover:text-rose-400"
-                    >
-                      <Trash2 className="w-2.5 h-2.5" />
-                    </button>
-                  )}
-                </div>
+                {(onEditSubTab || onDeleteSubTab) && (
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity mr-1">
+                    {onEditSubTab && (
+                      <button
+                        onClick={(e) => startEdit(st, e)}
+                        title="دەستکاری ناو"
+                        className="p-0.5 text-slate-400 hover:text-blue-300"
+                      >
+                        <Edit2 className="w-2.5 h-2.5" />
+                      </button>
+                    )}
+                    {onDeleteSubTab && subTabs.length > 1 && (
+                      <button
+                        onClick={(e) => handleDelete(st.id, st.name, e)}
+                        title="سڕینەوە"
+                        className="p-0.5 text-slate-400 hover:text-rose-400"
+                      >
+                        <Trash2 className="w-2.5 h-2.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -130,18 +138,20 @@ export const SubTabs: React.FC<SubTabsProps> = ({
         </div>
 
         {/* Add Sub-tab Button */}
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg transition-all cursor-pointer shrink-0"
-        >
-          <Plus className="w-3 h-3" />
-          <span>{t('addSubTab')}</span>
-        </button>
+        {onAddSubTab && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg transition-all cursor-pointer shrink-0"
+          >
+            <Plus className="w-3 h-3" />
+            <span>{t('addSubTab')}</span>
+          </button>
+        )}
 
       </div>
 
       {/* Modal for adding new SubTab */}
-      {showAddModal && (
+      {showAddModal && onAddSubTab && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-700 pb-2.5">

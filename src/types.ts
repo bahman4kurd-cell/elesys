@@ -49,12 +49,23 @@ export interface ElectionBranch {
   activeSubTabId: string;
 }
 
+export type UserRole = 'admin' | 'viewer';
+
+export interface UserAccount {
+  id: string;
+  username: string;
+  password?: string;
+  role: UserRole;
+  allowedBranchId?: string; // ئەگەر ڤیوەر بێت، تەنها ئەم لقەی پێ دەدرێت
+}
+
 export interface AppDatabase {
   version: number;
   lastUpdated: string;
   rounds: ElectionRound[];
   activeRoundId: string; // or 'dashboard'
   customParties: Party[];
+  users?: UserAccount[]; // لیستی یوزەرەکان بۆ سیستەمی بەڕێوەبردن
   settings: {
     useKurdishNumerals: boolean;
     autoSaveIntervalMs: number;
@@ -67,5 +78,7 @@ export interface AppDatabase {
 export interface AuthState {
   isAuthenticated: boolean;
   username: string;
+  role?: UserRole;
+  allowedBranchId?: string;
   lastLogin?: string;
 }

@@ -17,7 +17,7 @@ import {
   Legend,
 } from 'recharts';
 import { LayoutDashboard, Filter, BarChart3, PieChart, LineChart, Trophy, CircleDot, Activity } from 'lucide-react';
-import { AppDatabase, ElectionRound, ElectionBranch } from '../types';
+import { AppDatabase, ElectionRound, ElectionBranch, UserRole } from '../types';
 import { DEFAULT_PARTIES } from '../data/defaultParties';
 import { formatNumber, formatPercentage, calculateVotePercentage } from '../utils/numberFormat';
 import { ChartLegend } from './ChartLegend';
@@ -38,6 +38,8 @@ interface GeneralDashboardProps {
   db: AppDatabase;
   useKurdishNumerals: boolean;
   onNavigateToRound: (roundId: string) => void;
+  currentUserRole?: UserRole | 'super_admin';
+  currentUsername?: string;
 }
 
 interface AggregatedItem {
@@ -372,46 +374,47 @@ export const GeneralDashboard: React.FC<GeneralDashboardProps> = ({
           </select>
         </div>
 
+        {/* کۆمبۆبۆکس و دوگمەکانی گۆڕینی جۆری چارت - بۆ هەموو یوزەرێک کارایە (Bar, Pie, Donut, Line, Area) */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             onClick={() => setChartMode('bar')}
-            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs ${
-              chartMode === 'bar' ? 'border-blue-500 bg-blue-600 text-white' : 'border-slate-700 bg-slate-950 text-slate-300'
+            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs cursor-pointer ${
+              chartMode === 'bar' ? 'border-blue-500 bg-blue-600 text-white font-bold' : 'border-slate-700 bg-slate-950 text-slate-300 hover:bg-slate-800'
             }`}
           >
-            <BarChart3 className="h-4 w-4" /> Bar
+            <BarChart3 className="h-4 w-4" /> Bar (ستوونی)
           </button>
           <button
             onClick={() => setChartMode('pie')}
-            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs ${
-              chartMode === 'pie' ? 'border-blue-500 bg-blue-600 text-white' : 'border-slate-700 bg-slate-950 text-slate-300'
+            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs cursor-pointer ${
+              chartMode === 'pie' ? 'border-blue-500 bg-blue-600 text-white font-bold' : 'border-slate-700 bg-slate-950 text-slate-300 hover:bg-slate-800'
             }`}
           >
-            <PieChart className="h-4 w-4" /> Pie
+            <PieChart className="h-4 w-4" /> Pie (بازنەیی)
           </button>
           <button
             onClick={() => setChartMode('donut')}
-            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs ${
-              chartMode === 'donut' ? 'border-blue-500 bg-blue-600 text-white' : 'border-slate-700 bg-slate-950 text-slate-300'
+            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs cursor-pointer ${
+              chartMode === 'donut' ? 'border-blue-500 bg-blue-600 text-white font-bold' : 'border-slate-700 bg-slate-950 text-slate-300 hover:bg-slate-800'
             }`}
           >
-            <CircleDot className="h-4 w-4" /> Donut
+            <CircleDot className="h-4 w-4" /> Donut (دۆنات)
           </button>
           <button
             onClick={() => setChartMode('line')}
-            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs ${
-              chartMode === 'line' ? 'border-blue-500 bg-blue-600 text-white' : 'border-slate-700 bg-slate-950 text-slate-300'
+            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs cursor-pointer ${
+              chartMode === 'line' ? 'border-blue-500 bg-blue-600 text-white font-bold' : 'border-slate-700 bg-slate-950 text-slate-300 hover:bg-slate-800'
             }`}
           >
-            <LineChart className="h-4 w-4" /> Line
+            <LineChart className="h-4 w-4" /> Line (هێڵی)
           </button>
           <button
             onClick={() => setChartMode('area')}
-            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs ${
-              chartMode === 'area' ? 'border-blue-500 bg-blue-600 text-white' : 'border-slate-700 bg-slate-950 text-slate-300'
+            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs cursor-pointer ${
+              chartMode === 'area' ? 'border-blue-500 bg-blue-600 text-white font-bold' : 'border-slate-700 bg-slate-950 text-slate-300 hover:bg-slate-800'
             }`}
           >
-            <Activity className="h-4 w-4" /> Area
+            <Activity className="h-4 w-4" /> Area (ڕووبەر)
           </button>
         </div>
 
@@ -532,7 +535,7 @@ export const GeneralDashboard: React.FC<GeneralDashboardProps> = ({
               <button
                 key={`jump-${round.id}`}
                 onClick={() => onNavigateToRound(round.id)}
-                className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 hover:border-blue-500 hover:text-white"
+                className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 hover:border-blue-500 hover:text-white cursor-pointer"
               >
                 {round.title}
               </button>

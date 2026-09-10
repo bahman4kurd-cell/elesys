@@ -66,7 +66,7 @@ function aistudioMediaPlugin(): Plugin {
 
 export default defineConfig(() => {
   return {
-    base: './',
+    base: '/elesys/', // <--- ئەمە گۆڕدرا بۆ ناوی پڕۆژەکەت لەسەر گیتهاب تا کێشەی URL نەدات
     plugins: [react(), tailwindcss(), aistudioMediaPlugin()],
     resolve: {
       alias: {

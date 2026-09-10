@@ -1,9 +1,8 @@
 import React, { useRef } from 'react';
 import { StorageService } from '../services/storage';
-import { AppDatabase } from '../types';
+import { AppDatabase, UserAccount } from '../types';
 import { formatNumber } from '../utils/numberFormat';
 import { t } from '../i18n';
-import logoUrl from '../logo.ico.ico';
 import {
   Download,
   Upload,
@@ -23,6 +22,8 @@ interface NavbarProps {
   onLogout: () => void;
   onDatabaseImported: () => void;
   onUpdateTheme: (theme: 'dark' | 'light' | 'gray' | 'government') => void;
+  onUpdateDatabase: (updated: AppDatabase) => void;
+  currentUser?: UserAccount;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -34,6 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onUpdateTheme,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   const useKurdish = db.settings?.useKurdishNumerals ?? false;
   const currentTheme = db.settings?.theme || 'government';
   const isGovernmentTheme = currentTheme === 'government';
@@ -83,8 +85,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     >
       <div className="max-w-[1800px] mx-auto px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 shadow-md">
-            <img src={logoUrl} alt="System Logo" className="w-4 h-4 object-contain" />
+          <div className="p-2 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 shadow-md text-white">
+            <Landmark className="w-4 h-4" />
           </div>
 
           <div className="min-w-0">
@@ -148,7 +150,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <button
               onClick={() => onUpdateTheme('government')}
-              title="تیمی حکومی (Government Theme)"
+              title="تیمی حکومی"
               className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                 isGovernmentTheme
                   ? 'bg-amber-400 text-slate-900 shadow-sm'
@@ -161,7 +163,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => onUpdateTheme('light')}
-              title="تیمی لایت (Light Theme)"
+              title="تیمی لایت"
               className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                 currentTheme === 'light'
                   ? 'bg-white text-blue-600 shadow-sm'
@@ -174,7 +176,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => onUpdateTheme('gray')}
-              title="تیمی گرەی (Gray Theme)"
+              title="تیمی گرەی"
               className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                 currentTheme === 'gray'
                   ? 'bg-slate-700 text-slate-100 shadow-sm'
@@ -187,7 +189,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => onUpdateTheme('dark')}
-              title="تیمی دارک (Dark Theme)"
+              title="تیمی دارک"
               className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                 currentTheme === 'dark'
                   ? 'bg-slate-800 text-blue-300 shadow-sm'
@@ -225,14 +227,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={onOpenPrint}
-            className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+            className={`px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 text-xs font-medium ${
               isLightTheme
-                ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
+                ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300 shadow-sm'
                 : 'bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border-amber-500/40'
             }`}
             title={t('print_report')}
           >
             <Printer className="w-4 h-4" />
+            <span className="hidden sm:inline">ڕاپۆرت و چاپکردن</span>
           </button>
 
           <button
